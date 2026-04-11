@@ -1,0 +1,73 @@
+workspace "GreenRide" "Ride Service Belső Felépítése - C3 Component szint" {
+
+    model {
+        # Külső szereplők és konténerek (amikkel a Ride Service érintkezik)
+        apiGateway = softwareSystem "API Gateway" "Kérések útválasztása."
+        vehicleService = softwareSystem "Vehicle Service" "Járműadatok forrása." "External"
+        paymentService = softwareSystem "Payment Service" "Fizetési tranzakciók." "External"
+        iotSystem = softwareSystem "IoT Cloud / Devices" "Járművek távvezérlése." "External"
+
+        greenRide = softwareSystem "GreenRide Platform" {
+            rideDb = container "Ride DB" "Utazási adatok tárolása." "PostgreSQL" "Database"
+            
+            rideService = container "Ride Service" "Az utazások életciklusát kezelő mikro-szolgáltatás." "Java / Spring Boot" {
+                # --- KOMPONENSEK ---
+                controller = component "Ride Controller" "REST API végpontokat biztosít az utazások kezeléséhez." "Spring RestController"
+                appService = component "Ride Application Service" "Vezérli az üzleti folyamatokat és koordinálja a komponenseket." "Spring Service"
+                eligibility = component "Eligibility Checker" "Ellenőrzi a felhasználó jogosultságát (tiltás, fizetési mód)." "Spring Component"
+                availability = component "Vehicle Availability Checker" "Validálja a jármű foglalhatóságát." "Spring Component"
+                unlocker = component "Unlock Coordinator" "Vezényli a jármű fizikai feloldását." "Spring Component"
+                stateManager = component "Ride State Manager" "Kezeli az utazás állapotátmeneteit (requested -> active -> completed)." "Spring Component"
+                fareCoord = component "Fare Coordinator" "Kezdeményezi a díjszámítást és a számlázást." "Spring Component"
+                repository = component "Ride Repository" "Absztrakciós réteg az utazási adatok perzisztenciájához." "Spring Data JPA"
+            }
+        }
+
+        # --- KAPCSOLATOK ---
+        # Külső hívás érkezik
+        apiGateway -> controller "Utazás indítás/zárás kérések" "HTTPS/JSON"
+        
+        # Controller hívja az Application Service-t
+        controller -> appService "Kérések továbbítása"
+        
+        # Application Service koordináció
+        appService -> eligibility "Jogosultság ellenőrzése"
+        appService -> availability "Jármű állapot ellenőrzése"
+        appService -> stateManager "Állapot frissítése"
+        appService -> unlocker "Feloldás indítása"
+        appService -> repository "Adatmentés kérése"
+        
+        # Lezárási folyamat
+        appService -> fareCoord "Utazás végi elszámolás"
+        
+        # Adatbázis kapcsolat
+        repository -> rideDb "SQL lekérdezések" "JDBC"
+        
+        # Kifelé irányuló hívások a szolgáltatásból
+        availability -> vehicleService "Jármű státusz lekérése" "gRPC/REST"
+        unlocker -> iotSystem "Unlock parancs küldése" "MQTT/API"
+        fareCoord -> paymentService "Fizetés indítása" "gRPC/REST"
+    }
+
+    views {
+        component rideService "RideServiceComponents" {
+            include *
+            autoLayout lr
+        }
+
+        styles {
+            element "Component" {
+                background #85bbf0
+                color #000000
+            }
+            element "Database" {
+                shape Cylinder
+                background #cccccc
+            }
+            element "External" {
+                background #999999
+                color #ffffff
+            }
+        }
+    }
+}
