@@ -1,0 +1,86 @@
+workspace "GreenRide" "Városi mikromobilitási platform - C2 Container szint" {
+
+    model {
+        user = person "Utas / Felhasználó" "Járműveket keres és utazik."
+        staff = person "Operatív Személyzet" "Flottakezelők, Adminok és Helpdesk."
+
+        greenRide = softwareSystem "GreenRide Platform" {
+            # Kliensek
+            mobileApp = container "Mobile App" "Lehetővé teszi a járművek keresését és bérlését." "Flutter/Dart"
+            adminPortal = container "Admin / Support Portal" "Felület a flotta- és ügyfélkezeléshez." "React/TypeScript"
+
+            # Belépési pont
+            apiGateway = container "API Gateway" "Kérések útválasztása, hitelesítés és rate limiting." "Spring Cloud Gateway / Nginx"
+
+            # Szolgáltatások (Microservices)
+            idService = container "Identity Service" "Felhasználói fiókok és jogosultságok kezelése." "Go / Keycloak"
+            userService = container "User & Subscription Service" "Profilok, bérletek és kedvezmények kezelése." "Java / Spring Boot"
+            vehicleService = container "Vehicle Service" "Járművek valós idejű állapota és keresése." "Go"
+            rideService = container "Ride Service" "Utazások indítása, GPS nyomkövetés és lezárás." "Java / Spring Boot"
+            fleetService = container "Fleet Management Service" "Karbantartási munkák és flotta optimalizáció." "Python / FastAPI"
+            paymentService = container "Payment Service" "Számlázás és fizetési tranzakciók." "Java / Spring Boot"
+            notifService = container "Notification Service" "Push üzenetek és e-mailek kiküldése." "Node.js"
+            supportService = container "Support Integration Service" "Hibajegyek és ügyfélpanaszok kezelése." "Node.js"
+
+            # Adatbázisok (Domainenként)
+            userDb = container "User DB" "Felhasználói és bérlet adatok tárolása." "PostgreSQL" "Database"
+            vehicleDb = container "Vehicle DB" "Jármű állapotok és térképi adatok." "MongoDB / Redis" "Database"
+            rideDb = container "Ride DB" "Utazási naplók és útvonalak." "PostgreSQL" "Database"
+        }
+
+        # Külső rendszerek
+        iot = softwareSystem "IoT Eszközök" "Rollerekbe épített vezérlők." "External"
+        paymentGateway = softwareSystem "Payment Gateway" "Stripe/PayPal." "External"
+
+        # Kapcsolatok - Kliensek
+        user -> mobileApp "Használja"
+        staff -> adminPortal "Kezeli a rendszert"
+        
+        mobileApp -> apiGateway "API hívások" "HTTPS/JSON"
+        adminPortal -> apiGateway "API hívások" "HTTPS/JSON"
+
+        # Kapcsolatok - Gateway -> Services
+        apiGateway -> idService "Auth kérések"
+        apiGateway -> userService "Profil adatok"
+        apiGateway -> vehicleService "Jármű keresés"
+        apiGateway -> rideService "Utazás kezelés"
+        apiGateway -> fleetService "Flotta adatok"
+        apiGateway -> supportService "Hibajegy kezelés"
+
+        # Belső szolgáltatásközi kapcsolatok (példák)
+        rideService -> paymentService "Fizetés indítása" "gRPC"
+        rideService -> notifService "Értesítés küldése" "Message Bus"
+        
+        # Adatbázis kapcsolatok
+        userService -> userDb "Olvas/Ír"
+        vehicleService -> vehicleDb "Olvas/Ír"
+        rideService -> rideDb "Olvas/Ír"
+
+        # Külső integrációk
+        vehicleService -> iot "Telemetria és vezérlés" "MQTT"
+        paymentService -> paymentGateway "Tranzakció feldolgozás" "HTTPS"
+    }
+
+    views {
+        container greenRide "Containers" {
+            include *
+            autoLayout lr
+        }
+
+        styles {
+            element "Container" {
+                background #438dd5
+                color #ffffff
+            }
+            element "Database" {
+                shape Cylinder
+                background #85bbf0
+                color #000000
+            }
+            element "External" {
+                background #999999
+                color #ffffff
+            }
+        }
+    }
+}
