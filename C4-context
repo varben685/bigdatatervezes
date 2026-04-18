@@ -1,42 +1,32 @@
 workspace "GreenRide" "Városi mikromobilitási platform" {
 
     model {
-        # Szereplők (Actors)
         user = person "Utas / Felhasználó" "Járműveket keres, foglal és utazik a mobilalkalmazással."
-        operator = person "Flottaüzemeltető" "Figyeli a járművek állapotát, karbantartást végez."
-        admin = person "Adminisztrátor" "Rendszerbeállításokat, kedvezményeket és analitikát kezel."
-        # --- ÚJ SZEREPLŐ ---
-        helpdesk = person "Helpdesk Operátor" "Vásárlói panaszokat és technikai problémákat kezel."
+        operator = person "Flottaüzemeltető" "Figyeli a járművek állapotát és kezeli a karbantartást."
+        admin = person "Adminisztrátor" "Kedvezményeket, beállításokat és riportokat kezel."
+        helpdesk = person "Helpdesk operátor" "Felhasználói problémákat és hibajegyeket kezel."
 
-        # A rendszerünk (Software System)
-        greenRide = softwareSystem "GreenRide Platform" "A központi mikromobilitási rendszer, amely kiszolgálja a klienseket és kezeli a flottát."
+        greenRide = softwareSystem "GreenRide Platform" "A központi mikromobilitási rendszer."
 
-        # Külső rendszerek (External Systems)
-        iot = softwareSystem "Járművek / IoT eszközök" "Beépített GPS és zárvezérlő egységek a rollereken/bicikliken." "External"
-        maps = softwareSystem "Térkép szolgáltató" "Google Maps vagy hasonló térinformatikai szolgáltatás." "External"
-        payment = softwareSystem "Fizetési szolgáltató" "Stripe vagy banki gateway a tranzakciókhoz." "External"
-        auth = softwareSystem "Külső Auth szolgáltató" "Google/Apple OAuth azonosítás." "External"
-        notification = softwareSystem "Push/Email szolgáltató" "Firebase vagy SendGrid értesítések küldéséhez." "External"
-        ticketing = softwareSystem "Ügyfélszolgálati Jegyrendszer" "Külső rendszer (pl. Jira Service Desk) a hibajegyek követésére." "External"
+        iot = softwareSystem "IoT eszközök" "A járművekbe épített vezérlő és helymeghatározó egységek." "External"
+        maps = softwareSystem "Térkép szolgáltató" "Térképes megjelenítés és geolokáció." "External"
+        paymentGateway = softwareSystem "Fizetési szolgáltató" "Bankkártyás és online fizetések feldolgozása." "External"
+        identityProvider = softwareSystem "Külső azonosító szolgáltató" "Google vagy Apple bejelentkezés." "External"
+        notificationProvider = softwareSystem "Push és email szolgáltató" "Értesítések kiküldése." "External"
+        ticketingSystem = softwareSystem "Jegykezelő rendszer" "Ügyfélszolgálati hibajegyek nyilvántartása." "External"
 
-        # Kapcsolatok (Relationships)
-        user -> greenRide "Járművet keres és foglal" "Mobile/Web"
-        # --- ÚJ KAPCSOLAT (USER -> HELPDESK) ---
-        user -> helpdesk "Problémát jelez (telefonon, chat-en vagy e-mailben)"
+        user -> greenRide "Járművet keres, foglal és használ" "Mobile app"
+        operator -> greenRide "Flottaadatokat és járműállapotot kezel" "Admin portal"
+        admin -> greenRide "Rendszerbeállításokat és üzleti szabályokat kezel" "Admin portal"
+        helpdesk -> greenRide "Felhasználói és utazási adatokat ellenőriz" "Support portal"
+        helpdesk -> ticketingSystem "Hibajegyet hoz létre és frissít" "HTTPS"
 
-        operator -> greenRide "Flotta állapotot kezel" "Admin Portal"
-        admin -> greenRide "Rendszert konfigurál és riportokat néz" "Admin Portal"
-        
-        # --- ÚJ KAPCSOLATOK (HELPDESK -> RENDSZEREK) ---
-        helpdesk -> greenRide "Felhasználói és jármű adatokat kér le, tranzakciókat ellenőriz" "Admin/Support Portal"
-        helpdesk -> ticketing "Létrehozza és frissíti a hibajegyeket" "HTTPS/API"
-
-        greenRide -> iot "Parancsokat küld (nyitás/zár) és adatokat fogad" "MQTT/TCP"
-        greenRide -> maps "Térkép- és útvonaladatokat kér le" "HTTPS/JSON"
-        greenRide -> payment "Pénzügyi tranzakciókat indít" "HTTPS/JSON"
-        greenRide -> auth "Felhasználót azonosít" "OIDC/OAuth2"
-        greenRide -> notification "Értesítéseket továbbít" "HTTPS/API"
-        greenRide -> ticketing "Ticket (nyitás/zárás/kezelés)" "HTTPS/API"
+        greenRide -> iot "Parancsokat küld és telemetria adatokat fogad" "MQTT / HTTPS"
+        greenRide -> maps "Térképes és helyadatokat kér le" "HTTPS"
+        greenRide -> paymentGateway "Fizetési tranzakciókat indít" "HTTPS"
+        greenRide -> identityProvider "Külső bejelentkezést használ" "OIDC / OAuth2"
+        greenRide -> notificationProvider "Értesítéseket küld" "HTTPS"
+        greenRide -> ticketingSystem "Jegyadatokat szinkronizál" "HTTPS"
     }
 
     views {
