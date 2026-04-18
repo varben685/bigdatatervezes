@@ -1,64 +1,73 @@
-workspace "GreenRide" "Városi mikromobilitási platform - C2 Container szint" {
+workspace "GreenRide" "Városi mikromobilitási platform Container szint" {
 
     model {
         user = person "Utas / Felhasználó" "Járműveket keres és utazik."
-        staff = person "Operatív Személyzet" "Flottakezelők, Adminok és Helpdesk."
+        staff = person "Operatív személyzet" "Flottaüzemeltetők, adminok és helpdesk munkatársak."
+
+        iot = softwareSystem "IoT eszközök" "A járművek fedélzeti eszközei." "External"
+        maps = softwareSystem "Térkép szolgáltató" "Térképes helymeghatározás és megjelenítés." "External"
+        paymentGateway = softwareSystem "Fizetési szolgáltató" "Online fizetések feldolgozása." "External"
+        identityProvider = softwareSystem "Külső azonosító szolgáltató" "Google vagy Apple alapú bejelentkezés." "External"
+        notificationProvider = softwareSystem "Push és email szolgáltató" "Értesítések kiküldése." "External"
+        ticketingSystem = softwareSystem "Jegykezelő rendszer" "Ügyfélszolgálati hibajegyek kezelése." "External"
 
         greenRide = softwareSystem "GreenRide Platform" {
-            # Kliensek
-            mobileApp = container "Mobile App" "Lehetővé teszi a járművek keresését és bérlését." "Flutter/Dart"
-            adminPortal = container "Admin / Support Portal" "Felület a flotta- és ügyfélkezeléshez." "React/TypeScript"
+            mobileApp = container "Mobile App" "Járműkeresés, foglalás és utazásindítás." "Flutter"
+            adminPortal = container "Admin and Support Portal" "Flotta, ügyfél és támogatási feladatok kezelése." "React"
 
-            # Belépési pont
-            apiGateway = container "API Gateway" "Kérések útválasztása, hitelesítés és rate limiting." "Spring Cloud Gateway / Nginx"
+            apiGateway = container "API Gateway" "Kérések fogadása, hitelesítés és útválasztás." "Spring Cloud Gateway"
 
-            # Szolgáltatások (Microservices)
-            idService = container "Identity Service" "Felhasználói fiókok és jogosultságok kezelése." "Go / Keycloak"
-            userService = container "User & Subscription Service" "Profilok, bérletek és kedvezmények kezelése." "Java / Spring Boot"
-            vehicleService = container "Vehicle Service" "Járművek valós idejű állapota és keresése." "Go"
-            rideService = container "Ride Service" "Utazások indítása, GPS nyomkövetés és lezárás." "Java / Spring Boot"
-            fleetService = container "Fleet Management Service" "Karbantartási munkák és flotta optimalizáció." "Python / FastAPI"
-            paymentService = container "Payment Service" "Számlázás és fizetési tranzakciók." "Java / Spring Boot"
-            notifService = container "Notification Service" "Push üzenetek és e-mailek kiküldése." "Node.js"
-            supportService = container "Support Integration Service" "Hibajegyek és ügyfélpanaszok kezelése." "Node.js"
+            identityService = container "Identity Service" "Belső felhasználói azonosítás és jogosultságkezelés." "Spring Boot"
+            userService = container "User and Subscription Service" "Profilok, bérletek és kedvezmények kezelése." "Spring Boot"
+            vehicleService = container "Vehicle Service" "Járművek állapota, helyzete és keresése." "Spring Boot"
+            rideService = container "Ride Service" "Utazás indítása, követése és lezárása." "Spring Boot"
+            fleetService = container "Fleet Management Service" "Karbantartás és flottaüzemeltetés támogatása." "Spring Boot"
+            paymentService = container "Payment Service" "Díjszámítás és fizetési folyamatok kezelése." "Spring Boot"
+            notificationService = container "Notification Service" "Push és email értesítések küldése." "Spring Boot"
+            supportService = container "Support Service" "Panaszok és ügyfélszolgálati folyamatok kezelése." "Spring Boot"
 
-            # Adatbázisok (Domainenként)
-            userDb = container "User DB" "Felhasználói és bérlet adatok tárolása." "PostgreSQL" "Database"
-            vehicleDb = container "Vehicle DB" "Jármű állapotok és térképi adatok." "MongoDB / Redis" "Database"
-            rideDb = container "Ride DB" "Utazási naplók és útvonalak." "PostgreSQL" "Database"
+            messageBus = container "Message Bus" "Aszinkron események továbbítása a szolgáltatások között." "Kafka"
+            vehicleCache = container "Vehicle Cache" "Gyakran lekért járműállapotok gyors elérése." "Redis" "Database"
+
+            userDb = container "User DB" "Felhasználói és előfizetési adatok." "PostgreSQL" "Database"
+            vehicleDb = container "Vehicle DB" "Járműállapotok és telemetria metaadatok." "PostgreSQL" "Database"
+            rideDb = container "Ride DB" "Utazási adatok és események." "PostgreSQL" "Database"
+            paymentDb = container "Payment DB" "Fizetési és elszámolási adatok." "PostgreSQL" "Database"
         }
 
-        # Külső rendszerek
-        iot = softwareSystem "IoT Eszközök" "Rollerekbe épített vezérlők." "External"
-        paymentGateway = softwareSystem "Payment Gateway" "Stripe/PayPal." "External"
-
-        # Kapcsolatok - Kliensek
         user -> mobileApp "Használja"
-        staff -> adminPortal "Kezeli a rendszert"
-        
-        mobileApp -> apiGateway "API hívások" "HTTPS/JSON"
-        adminPortal -> apiGateway "API hívások" "HTTPS/JSON"
+        staff -> adminPortal "Használja"
 
-        # Kapcsolatok - Gateway -> Services
-        apiGateway -> idService "Auth kérések"
-        apiGateway -> userService "Profil adatok"
-        apiGateway -> vehicleService "Jármű keresés"
-        apiGateway -> rideService "Utazás kezelés"
-        apiGateway -> fleetService "Flotta adatok"
-        apiGateway -> supportService "Hibajegy kezelés"
+        mobileApp -> apiGateway "API hívások" "HTTPS"
+        adminPortal -> apiGateway "API hívások" "HTTPS"
 
-        # Belső szolgáltatásközi kapcsolatok (példák)
-        rideService -> paymentService "Fizetés indítása" "gRPC"
-        rideService -> notifService "Értesítés küldése" "Message Bus"
-        
-        # Adatbázis kapcsolatok
-        userService -> userDb "Olvas/Ír"
-        vehicleService -> vehicleDb "Olvas/Ír"
-        rideService -> rideDb "Olvas/Ír"
+        apiGateway -> identityService "Bejelentkezés és token ellenőrzés"
+        apiGateway -> userService "Profil és előfizetés műveletek"
+        apiGateway -> vehicleService "Járműkeresés és állapotlekérdezés"
+        apiGateway -> rideService "Utazás indítása és lezárása"
+        apiGateway -> fleetService "Flotta műveletek"
+        apiGateway -> supportService "Támogatási műveletek"
 
-        # Külső integrációk
-        vehicleService -> iot "Telemetria és vezérlés" "MQTT"
-        paymentService -> paymentGateway "Tranzakció feldolgozás" "HTTPS"
+        identityService -> identityProvider "Külső azonosítás" "OIDC"
+        vehicleService -> maps "Térképes adatok" "HTTPS"
+        vehicleService -> iot "Telemetria és vezérlés" "MQTT / HTTPS"
+        paymentService -> paymentGateway "Fizetés indítása" "HTTPS"
+        notificationService -> notificationProvider "Értesítés küldése" "HTTPS"
+        supportService -> ticketingSystem "Jegyek kezelése" "HTTPS"
+
+        rideService -> vehicleService "Jármű állapot ellenőrzése"
+        rideService -> paymentService "Utazás lezárás utáni díjszámítás"
+        rideService -> notificationService "Utazási értesítések"
+        rideService -> messageBus "Utazási események publikálása"
+        paymentService -> messageBus "Fizetési események publikálása"
+        fleetService -> messageBus "Flottaesemények publikálása"
+        notificationService -> messageBus "Események feldolgozása"
+
+        vehicleService -> vehicleCache "Olvas és frissít"
+        userService -> userDb "Olvas és ír"
+        vehicleService -> vehicleDb "Olvas és ír"
+        rideService -> rideDb "Olvas és ír"
+        paymentService -> paymentDb "Olvas és ír"
     }
 
     views {
